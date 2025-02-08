@@ -58,164 +58,36 @@ Prerequisites:
 
 1. Create the Secret:
 
-First, create the mongodb-secret to securely store MongoDB credentials:
-
-apiVersion: v1
-kind: Secret
-metadata:
-  name: mongodb-secret
-type: Opaque
-data:
-  username: <base64-encoded-username>
-  password: <base64-encoded-password>
+First, create the mongodb-secret to securely store MongoDB credentials (mongodb-secret.yaml)
 
 Replace <base64-encoded-username> and <base64-encoded-password> with your own encoded values.
 2. Define the StorageClass:
 
-Define the StorageClass to provision AWS EBS volumes:
-
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: mongodb-sc
-provisioner: ebs.csi.aws.com
-volumeBindingMode: WaitForFirstConsumer
+Define the StorageClass to provision AWS EBS volumes (mongodb-sc.yaml)
 
 3. Create the PersistentVolumeClaim:
 
-Create the PersistentVolumeClaim to request 5Gi of storage for MongoDB:
-
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: mongodb-pvc
-spec:
-  accessModes:
-    - ReadWriteOnce
-  storageClassName: mongodb-sc
-  resources:
-    requests:
-      storage: 5Gi
+Create the PersistentVolumeClaim to request 5Gi of storage for MongoDB (mongodb-pvc.yaml)
 
 4. Deploy MongoDB:
 
-Now, create the Deployment for MongoDB using the secret for credentials:
-
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: mongodb-deploy
-spec:
-  selector:
-    matchLabels:
-      app: mongodb
-  template:
-    metadata:
-      labels:
-        app: mongodb
-    spec:
-      containers:
-        - name: mongodb
-          image: mongodb
-          ports:
-            - containerPort: 27017
-          env:
-            - name: MONGO_INITDB_ROOT_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  key: username
-                  name: mongodb-secret
-            - name: MONGO_INITDB_ROOT_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  key: password
-                  name: mongodb-secret
-          volumeMounts:
-            - mountPath: /var/mongodb
-              name: mongodb-storage
-      volumes:
-        - name: mongodb-storage
-          persistentVolumeClaim:
-            claimName: mongodb-pvc
+Now, create the Deployment for MongoDB using the secret for credentials (mongodb-deploy.yaml)
 
 5. Expose MongoDB Service:
 
-Create a Service to expose MongoDB on port 27017:
-
-apiVersion: v1
-kind: Service
-metadata:
-  name: mongodb-svc
-spec:
-  selector:
-    app: mongodb
-  ports:
-    - port: 27017
-      targetPort: 27017
+Create a Service to expose MongoDB on port 27017 (mongodb-svc.yaml)
 
 6. Configure Mongo Express:
 
-Create a ConfigMap with the MongoDB service URL:
-
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: mongodb-cm
-data:
-  database_url: mongodb-svc
+Create a ConfigMap with the MongoDB service URL (mongoexpress-cm.yaml)
 
 7. Deploy Mongo Express:
 
-Now, deploy the Mongo Express web interface:
+Now, deploy the Mongo Express web interface (mongoexpress-deploy.yaml)
 
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: mongoexpress-deploy
-spec:
-  selector:
-    matchLabels:
-      app: mongo-express
-  template:
-    metadata:
-      labels:
-        app: mongo-express
-    spec:
-      containers:
-        - name: mongo-express
-          image: mongo-express
-          ports:
-            - containerPort: 8081
-          env:
-            - name: ME_CONFIG_MONGODB_ADMINUSERNAME
-              valueFrom:
-                secretKeyRef:
-                  key: username
-                  name: mongodb-secret
-            - name: ME_CONFIG_MONGODB_ADMINPASSWORD
-              valueFrom:
-                secretKeyRef:
-                  key: password
-                  name: mongodb-secret
-            - name: ME_CONFIG_MONGODB_SERVER
-              valueFrom:
-                ConfigMapKeyRef:
-                  key: database_url
-                  name: mongodb-cm
 
 8. Expose Mongo Express Service:
 
-Finally, expose Mongo Express via a LoadBalancer service:
+Finally, expose Mongo Express via a LoadBalancer service (mongoexpress-svc.yaml)
 
-apiVersion: v1
-kind: Service
-metadata:
-  name: mongoexpress-svc
-spec:
-  selector:
-    app: mongo-express
-  type: LoadBalancer
-  ports:
-    - port: 8081
-      targetPort: 8081
-      nodePort: 31000
+
